@@ -17,8 +17,12 @@ public:
 public slots:
 	//menu
 	void on_actionImage_load_triggered();
+	void on_actionImage_loadPNG_triggered();
+
 	void on_actionImage_save_triggered();
 	void on_actionImage_save_palette_triggered();
+	void on_actionImage_savePNG_triggered();
+
 	void on_actionExit_triggered();
 
 	//src color table
@@ -47,4 +51,4 @@ protected:
 	void keyReleaseEvent(QKeyEvent*);
 };
 
-#endif // MAINWINDOW_H
+#endif

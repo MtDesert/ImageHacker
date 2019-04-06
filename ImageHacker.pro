@@ -16,27 +16,32 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 INCLUDEPATH += \
-../../CppProject/libCpp11 ../../CppProject/libCpp11/Containers \
-../../CppProject/libZipper \
-../../CppProject/libImage ../../CppProject/libImage/ColorSpaces
+../../CppProject/libGamesEngines/Cpp11 \
+../../CppProject/libGamesEngines/Cpp11/Containers \
+../../CppProject/libGamesEngines/Zipper \
+../../CppProject/libGamesEngines/Image \
+../../CppProject/libGamesEngines/Image/ColorSpaces
 
-LIBS += -L../../CppProject/lib-Linux -lCpp11 -lZipper -lImage
+LIBS += -L../../CppProject/libs -lGamesEngines
 
 SOURCES += \
 		main.cpp \
 		MainWindow.cpp \
 	TableModel_Color.cpp \
 	Widget_Image.cpp \
-    TableModel_Palette.cpp
+	TableModel_Palette.cpp \
+	Dialog_SavePNG.cpp
 
 HEADERS += \
 		MainWindow.h \
 	TableModel_Color.h \
 	Widget_Image.h \
-    TableModel_Palette.h
+	TableModel_Palette.h \
+	Dialog_SavePNG.h
 
 FORMS += \
-		MainWindow.ui
+		MainWindow.ui \
+	Dialog_SavePNG.ui
 
 SUBDIRS += \
 	ImageHacker.pro

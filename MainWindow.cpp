@@ -1,4 +1,7 @@
-#include "MainWindow.h"
+#include"MainWindow.h"
+#include"Dialog_SavePNG.h"
+#include"FileStructs/FilePNG.h"
+
 #include<QFileDialog>
 #include<QColorDialog>
 #include<QInputDialog>
@@ -12,7 +15,7 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	//color table
 	tableModel_SrcColor.image=&widget_SrcImage->image;
 	tableModel_DestColor.image=&widget_DestImage->image;
-	tableModel_DestColor.colorList=&widget_DestImage->colorList;
+	tableModel_DestColor.colorList=&widget_DestImage->colorsList;
 	tableModel_Palette.paletteList=&widget_DestImage->paletteList;
 
 	tableView_SrcColor->setModel(&tableModel_SrcColor);
@@ -25,7 +28,7 @@ void MainWindow::on_actionImage_load_triggered(){
 	if(!filename.isEmpty()){
 		//image
 		widget_SrcImage->loadImage(filename);
-		widget_DestImage->makeColorList(widget_SrcImage->image);
+		widget_DestImage->makeColorsList(widget_SrcImage->image);
 		widget_DestImage->makeImage(widget_SrcImage->image);
 		//code
 		widget_DestImage->paletteCode=widget_SrcImage->paletteCode;
@@ -35,6 +38,23 @@ void MainWindow::on_actionImage_load_triggered(){
 		tableModel_DestColor.reset();
 		tableModel_Palette.reset();
 		textEdit_Code->setPlainText(widget_SrcImage->paletteCode);
+	}
+}
+void MainWindow::on_actionImage_loadPNG_triggered(){
+	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
+	if(!filename.isEmpty()){
+		//图像处理
+		widget_SrcImage->loadFilePng(filename);
+		/*widget_DestImage->makeColorsList(widget_SrcImage->image);
+		widget_DestImage->makeImage(widget_SrcImage->image);
+		//code
+		widget_DestImage->paletteCode=widget_SrcImage->paletteCode;
+		widget_DestImage->parsePaletteCode();
+		//table model
+		tableModel_SrcColor.reset();
+		tableModel_DestColor.reset();
+		tableModel_Palette.reset();
+		textEdit_Code->setPlainText(widget_SrcImage->paletteCode);*/
 	}
 }
 void MainWindow::on_actionImage_save_triggered(){
@@ -47,6 +67,17 @@ void MainWindow::on_actionImage_save_palette_triggered(){
 	QString filename=QFileDialog::getSaveFileName(this,tr("Save Palette Image"),"","PNG Image(*.png)");
 	if(!filename.isEmpty()){
 		widget_DestImage->saveImage(filename,textEdit_Code->toPlainText());
+	}
+}
+void MainWindow::on_actionImage_savePNG_triggered(){
+	Dialog_SavePNG dialog;
+	int answer=dialog.exec();
+	if(answer==QDialog::Accepted){
+		widget_DestImage->saveFilePng(dialog.lineEdit_OutputFilename->text(),
+			dialog.spinBox_bitDepth->value(),
+			dialog.checkBox_hasPalette->isChecked(),
+			dialog.checkBox_hasColor->isChecked(),
+			dialog.checkBox_hasAlpha->isChecked());
 	}
 }
 void MainWindow::on_actionExit_triggered(){close();}
@@ -107,14 +138,14 @@ void MainWindow::on_actionDestTable_Delete_triggered(){}
 void MainWindow::on_actionDestTable_Edit_triggered(){
 	IF_VALID_DEST_INDEX
 	int row=index.row();
-	QColor color=widget_DestImage->colorList[row];
+	QColor color=widget_DestImage->colorsList[row];
 	//change color
 	color=QColorDialog::getColor(color,this,tr("Color"),
 		QColorDialog::ShowAlphaChannel|
 		QColorDialog::DontUseNativeDialog);
 	//write
 	if(color.isValid()){
-		widget_DestImage->colorList[row]=color;
+		widget_DestImage->colorsList[row]=color;
 	}
 }
 void MainWindow::on_actionDestImage_Remake_triggered(){
@@ -166,8 +197,8 @@ void MainWindow::slotMoveUpDown(int delta){
 	IF_VALID_DEST_INDEX
 	auto row=index.row();
 	auto row0=row+delta;
-	if(row0>=0 && row0<widget_DestImage->colorList.size()){
-		widget_DestImage->colorList.swap(row,row0);
+	if(row0>=0 && row0<widget_DestImage->colorsList.size()){
+		widget_DestImage->colorsList.swap(row,row0);
 		tableModel_DestColor.reset();
 		//follow
 		index=index.sibling(row0,index.column());

@@ -2,6 +2,7 @@
 #define WIDGET_IMAGE_H
 
 #include<QWidget>
+#include"Bitmap.h"
 
 struct Palette{
 	Palette();
@@ -17,33 +18,38 @@ class Widget_Image:public QWidget
 public:
 	Widget_Image(QWidget *parent=0);
 
+	//文件读写
 	void loadImage(const QString &filename);//parameter code for output
 	void saveImage(const QString &filename,const QString &code)const;
+	//PNG文件读写
+	void loadFilePng(const QString &filename);
+	void saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha)const;
 
-	QColor makeImage(const QImage &fromImage);//if return value is valid, it means error
-	void makeColorList(const QImage &image);
+	QColor makeImage(const QImage &fromImage);//根据fromImage和自身色表colorsList来创建图像,返回值有效表示有错误
+	void makeColorsList(const QImage &image);//根据图像image来创建色表,存入colorsList
 
 	bool imageColor(int index,QColor &color)const;//get color from image.colorTable,return whether success
 
+	//颜色变换
 	bool changeColor(int index,const QColor &destColor);
 	bool changeColor(int index,const QColor &destColor,const QRect &rect);
 
+	//闪烁功能
 	void startFlash(int index);
 	void startFlash(const QColor &flashColor);
 	void stopFlash();
 
+	//调色板代码
 	void parsePaletteCode();
 	void updateByPalette(const Palette &plte);
 	void updateByAllPalettes();
 
-	//data
+	//数据
 	QImage image;
-	QList<QColor> colorList;
-
-	//edit
+	QList<QColor> colorsList;
+	//编辑
 	QColor penColor;
-
-	//palette
+	//调色板
 	QString paletteCode;
 	QList<Palette> paletteList;
 protected:
