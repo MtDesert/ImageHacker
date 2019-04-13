@@ -1,7 +1,10 @@
 #include "TableModel_Color.h"
+#include"ColorRGB.h"
+
+#include"common.h"
 #include<QDebug>
 
-TableModel_Color::TableModel_Color():image(nullptr),colorList(nullptr){}
+TableModel_Color::TableModel_Color():colorList(nullptr){}
 
 void TableModel_Color::reset(){
 	beginResetModel();
@@ -30,12 +33,7 @@ QVariant TableModel_Color::headerData(int section,Qt::Orientation orientation,in
 	return QVariant();
 }
 int TableModel_Color::rowCount(const QModelIndex &parent)const{
-	if(colorList){
-		return colorList->size();
-	}else if(image){
-		return image->colorCount();
-	}
-	return 0;
+	return colorList?colorList->size():0;
 }
 int TableModel_Color::columnCount(const QModelIndex &parent)const{return 3;}
 QVariant TableModel_Color::data(const QModelIndex &index,int role)const{
@@ -46,9 +44,7 @@ QVariant TableModel_Color::data(const QModelIndex &index,int role)const{
 		case Qt::DecorationRole:{
 			QColor color;
 			if(colorList){
-				color=(*colorList)[row];
-			}else if(image){
-				color.setRgba(image->color(row));
+				color=uint2QColor(*(*colorList).data(row));
 			}
 			if(role==Qt::DisplayRole){
 				switch(col){

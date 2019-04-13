@@ -2,6 +2,8 @@
 #include"Dialog_SavePNG.h"
 #include"FileStructs/FilePNG.h"
 
+#include"common.h"
+
 #include<QFileDialog>
 #include<QColorDialog>
 #include<QInputDialog>
@@ -27,18 +29,16 @@ TestFile allFiles[]={
 	{"3p02",2,true,true,false},
 	{"3p04",4,true,true,false},
 	{"3p08",8,true,true,false},
-	{"4a08",8,false,false,true},
+	/*{"4a08",8,false,false,true},
 	{"4a16",16,false,false,true},
 	{"6a08",8,false,true,true},
-	{"6a16",16,false,true,true},
+	{"6a16",16,false,true,true},*/
 };
 
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	setupUi(this);
 	//color table
-	tableModel_SrcColor.image=&widget_SrcImage->image;
 	tableModel_SrcColor.colorList=&widget_SrcImage->colorsList;
-	tableModel_DestColor.image=&widget_DestImage->image;
 	tableModel_DestColor.colorList=&widget_DestImage->colorsList;
 	tableModel_Palette.paletteList=&widget_DestImage->paletteList;
 
@@ -46,13 +46,13 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	tableView_DestColor->setModel(&tableModel_DestColor);
 	tableView_Palette->setModel(&tableModel_Palette);
 	//debug
-	auto amount=sizeof(allFiles)/sizeof(TestFile);
+	/*auto amount=sizeof(allFiles)/sizeof(TestFile);
 	for(auto i=0;i<amount;++i){
 		auto &testFile=allFiles[i];
 		widget_SrcImage->loadFilePng("~/图片/png/basn"+testFile.filename+".png");
 		widget_SrcImage->saveFilePng("~/图片/pngOut/"+testFile.filename+".png",testFile.bitDepth,testFile.hasPalette,testFile.hasColor,testFile.hasAlpha);
 		//break;
-	}
+	}*/
 }
 
 void MainWindow::on_actionImage_load_triggered(){
@@ -61,7 +61,6 @@ void MainWindow::on_actionImage_load_triggered(){
 		//image
 		widget_SrcImage->loadImage(filename);
 		widget_DestImage->makeColorsList(widget_SrcImage->image);
-		widget_DestImage->makeImage(widget_SrcImage->image);
 		//code
 		widget_DestImage->paletteCode=widget_SrcImage->paletteCode;
 		widget_DestImage->parsePaletteCode();
@@ -80,12 +79,13 @@ void MainWindow::on_actionImage_loadPNG_triggered(){
 		tableModel_SrcColor.reset();
 		//设定目标图
 		widget_DestImage->image=widget_SrcImage->image;
-		widget_DestImage->makeColorsList(widget_SrcImage->image);
-		/*widget_DestImage->makeImage(widget_SrcImage->image);
-		//code
-		widget_DestImage->paletteCode=widget_SrcImage->paletteCode;
-		widget_DestImage->parsePaletteCode();*/
-		//table model
+		//设置目标色表
+		if(widget_SrcImage->colorsList.size()>0){
+			widget_DestImage->colorsList=widget_SrcImage->colorsList;
+		}else{
+			widget_DestImage->makeColorsList(widget_SrcImage->image);
+		}
+		//更新TableModel数据
 		tableModel_SrcColor.reset();
 		tableModel_DestColor.reset();
 		tableModel_Palette.reset();
@@ -112,7 +112,8 @@ void MainWindow::on_actionImage_savePNG_triggered(){
 			dialog.spinBox_bitDepth->value(),
 			dialog.checkBox_hasPalette->isChecked(),
 			dialog.checkBox_hasColor->isChecked(),
-			dialog.checkBox_hasAlpha->isChecked());
+			dialog.checkBox_hasAlpha->isChecked(),
+			dialog.checkBox_useCustomColorsList->isChecked()?&widget_DestImage->colorsList:nullptr);
 	}
 }
 void MainWindow::on_actionExit_triggered(){close();}
@@ -173,25 +174,17 @@ void MainWindow::on_actionDestTable_Delete_triggered(){}
 void MainWindow::on_actionDestTable_Edit_triggered(){
 	IF_VALID_DEST_INDEX
 	int row=index.row();
-	QColor color=widget_DestImage->colorsList[row];
+	QColor color=uint2QColor(*widget_DestImage->colorsList.data(row));
 	//change color
 	color=QColorDialog::getColor(color,this,tr("Color"),
 		QColorDialog::ShowAlphaChannel|
 		QColorDialog::DontUseNativeDialog);
 	//write
 	if(color.isValid()){
-		widget_DestImage->colorsList[row]=color;
+		*widget_DestImage->colorsList.data(row)=qColor2uint32(color);
 	}
 }
-void MainWindow::on_actionDestImage_Remake_triggered(){
-	auto color=widget_DestImage->makeImage(widget_SrcImage->image);
-	if(!color.isValid()){
-		QMessageBox::information(this,tr("Success"),tr("nice!"));
-	}else{
-		QMessageBox::critical(this,tr("Failed"),QString::asprintf("r=%d,g=%d,b=%d,a=%d not found",
-			color.red(),color.green(),color.blue(),color.alpha()));
-	}
-}
+void MainWindow::on_actionDestImage_Remake_triggered(){}
 
 void MainWindow::on_tableView_Palette_activated(const QModelIndex &index){
 	auto row=index.row();
@@ -219,7 +212,6 @@ void MainWindow::on_actionPalette_MakePalette_triggered(){
 	widget_DestImage->parsePaletteCode();
 }
 void MainWindow::on_actionPalette_MakeDestImage_triggered(){
-	widget_DestImage->makeImage(widget_SrcImage->image);
 	widget_DestImage->updateByAllPalettes();
 }
 
@@ -233,7 +225,14 @@ void MainWindow::slotMoveUpDown(int delta){
 	auto row=index.row();
 	auto row0=row+delta;
 	if(row0>=0 && row0<widget_DestImage->colorsList.size()){
-		widget_DestImage->colorsList.swap(row,row0);
+		//交换数据
+		auto p=widget_DestImage->colorsList.data(row);
+		auto p0=widget_DestImage->colorsList.data(row0);
+		if(p && p0){
+			auto tmp=*p;
+			*p=*p0;
+			*p0=tmp;
+		}
 		tableModel_DestColor.reset();
 		//follow
 		index=index.sibling(row0,index.column());

@@ -21,13 +21,11 @@ public:
 	//文件读写
 	void loadImage(const QString &filename);//parameter code for output
 	void saveImage(const QString &filename,const QString &code)const;
+	void makeColorsList(const QImage &image);//根据图像image来创建色表,存入colorsList
 	//PNG文件读写
 	void loadFilePng(const QString &filename);
-	void saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha)const;
+	void saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha,List<uint32> *colorsList=nullptr)const;
 	void makeColorsList(const FilePNG &filePng);//创建色表
-
-	QColor makeImage(const QImage &fromImage);//根据fromImage和自身色表colorsList来创建图像,返回值有效表示有错误
-	void makeColorsList(const QImage &image);//根据图像image来创建色表,存入colorsList
 
 	bool imageColor(int index,QColor &color)const;//get color from image.colorTable,return whether success
 
@@ -47,7 +45,7 @@ public:
 
 	//数据
 	QImage image;
-	QList<QColor> colorsList;
+	List<uint32> colorsList;
 	//编辑
 	QColor penColor;
 	//调色板

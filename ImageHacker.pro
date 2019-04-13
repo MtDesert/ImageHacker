@@ -37,7 +37,8 @@ HEADERS += \
 	TableModel_Color.h \
 	Widget_Image.h \
 	TableModel_Palette.h \
-	Dialog_SavePNG.h
+	Dialog_SavePNG.h \
+	common.h
 
 FORMS += \
 		MainWindow.ui \

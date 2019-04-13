@@ -1,4 +1,5 @@
 #include "Widget_Image.h"
+#include"common.h"
 
 #include<QToolTip>
 #include<QMouseEvent>
@@ -12,10 +13,8 @@
 #define VALID_COLOR_INDEX(index) (index>=0 && index<image.colorCount())
 
 #define FOREACH_PIXEL_IN_RECT(x0,y0,x1,y1,code)\
-QColor color;\
 for(int y=y0;y<y1;++y){\
 	for(int x=x0;x<x1;++x){\
-		color=image.pixelColor(x,y);\
 		code;\
 	}\
 }
@@ -90,15 +89,12 @@ void Widget_Image::loadFilePng(const QString &filename){
 	filePng.decodeTo(bitmap32);
 	//生成图像用于显示
 	auto w=bitmap32.getWidth(),h=bitmap32.getHeight();
-	uint32 color32=0;ColorRGBA rgba;
+	uint32 color32=0;
 	image=QImage(w,h,QImage::Format_RGBA8888);
-	QColor color;
 	for(decltype(h) y=0;y<h;++y){
 		for(decltype(w) x=0;x<w;++x){
 			bitmap32.getColor(x,y,color32);
-			rgba.fromRGBA(color32);//RGBA是OpenGL的格式
-			color.setRgba(rgba.toBGRA());
-			image.setPixelColor(x,y,color);//BGRA是BMP和QImage的主要格式
+			image.setPixelColor(x,y,uint2QColor(color32));
 		}
 	}
 	update();
@@ -115,101 +111,50 @@ void Widget_Image::makeColorsList(const FilePNG &filePng){
 	if(ihdr&&plte){
 		bool hasColor=false,hasAlpha=false;//确定色表类型
 		if(ihdr->getColorMask_Color(hasColor) && ihdr->getColorMask_Alpha(hasAlpha)){
-			qDebug()<<hasColor<<hasAlpha;
-			//获取颜色数
-			uint amount=hasColor?
-				(hasAlpha ? plte->rgbaAmount() : plte->rgbAmount()):
-				(hasAlpha ? plte->grayAlphaAmount() : plte->grayAmount());
-			auto trns=filePng.findtRNS();
-			//获取各个颜色值
-			QColor color;ColorRGBA rgba;
-			uint16 grayAlpha;
-			uint8 u8;
-			for(uint i=0;i<amount;++i){
-				if(hasColor){
-					if(hasAlpha){
-						plte->getRGBA(i,rgba);
-						color.setRgb(rgba.red,rgba.green,rgba.blue,rgba.alpha);
-					}else{//标准色表
-						plte->getColor(i,rgba);
-						color.setRgb(rgba.red,rgba.green,rgba.blue,rgba.alpha);
-					}
-				}else{
-					if(hasAlpha){
-						plte->getGrayAlpha(i,grayAlpha);
-						color.setRed(grayAlpha&0xFF);
-						color.setGreen(color.red());
-						color.setBlue(color.red());
-						color.setAlpha(grayAlpha>>8);
-					}else{
-						plte->getGray(i,u8);
-						color.setRgb(u8,u8,u8);
-						if(trns && trns->getAlpha(i,u8)){
-							color.setAlpha(u8);
-						}
-					}
-				}
-				qDebug()<<color;
-				colorsList.push_back(color);
-			}
+			plte->filePng_tRNS=filePng.findtRNS();
+			plte->getColorsList(hasColor,hasAlpha,colorsList);
 		}
 	}
 }
 
-void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha)const{
+void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha,List<uint32> *colorsList)const{
 	//转换成Bitmap32格式
 	Bitmap_32bit bitmap32;
 	auto w=image.width(),h=image.height();
 	bitmap32.newBitmap(w,h);
-	ColorRGBA rgba;uint32 color32;
+	uint32 color32;
 	for(decltype(h) y=0;y<h;++y){
 		for(decltype(w) x=0;x<w;++x){
-			rgba.fromBGRA(image.pixel(x,y));
-			color32=rgba.toRGBA();
+			color32=qColor2uint32(image.pixelColor(x,y));
 			bitmap32.setColor(x,y,color32);
 		}
 	}
 	//保存
 	FilePNG filePng;
-	filePng.encodeFrom(bitmap32,bitDepth,hasPalette,hasColor,hasAlpha);
+	filePng.encodeFrom(bitmap32,bitDepth,hasPalette,hasColor,hasAlpha,colorsList);
 	filePng.saveFilePNG(filename.toStdString());
 	//内存回收
 	bitmap32.deleteBitmap();
 	filePng.reset();
 }
 
-QColor Widget_Image::makeImage(const QImage &image){
-	this->image=QImage(image.width(),image.height(),QImage::Format_Indexed8);
-	//make color list
-	for(int i=0;i<colorsList.size();++i){
-		this->image.setColor(i,colorsList[i].rgba());
-	}
-	//make image
-	int idx=0;
-	FOREACH_PIXEL(
-	idx=colorsList.indexOf(color);
-	if(idx>=0)this->image.setPixel(x,y,idx);
-	else return color;
-	);
-	return QColor();
-}
-
 void Widget_Image::makeColorsList(const QImage &image){
 	colorsList.clear();
-	if(HAS_COLOR_TABLE){//use image's color table
+	if(HAS_COLOR_TABLE){//使用QImage的色表图
 		auto colorTable=image.colorTable();
-		QColor color;
 		for(auto rgb:colorTable){
-			color.setRgb(rgb);
-			color.setAlpha(qAlpha(rgb));//setRgb will ignore alpha
-			colorsList.append(color);
+			colorsList.push_back(qRgb2uint32(rgb));
 		}
-	}else{//statistics all pixels to make color table
-		FOREACH_PIXEL(if(!colorsList.contains(color))colorsList.append(color););
+	}else{//统计QImage中的颜色数
+		uint32 u32;
+		FOREACH_PIXEL(
+			u32=qRgb2uint32(image.pixel(x,y));
+			if(!colorsList.contain(u32))colorsList.push_back(u32);
+		);
 	}
 }
 void Widget_Image::parsePaletteCode(){
-	int colorIndex=0;
+	/*int colorIndex=0;
 	paletteList.clear();
 	int start=0,end=0,len=paletteCode.length();
 	while(start<len){
@@ -244,8 +189,7 @@ void Widget_Image::parsePaletteCode(){
 			}
 			paletteList.push_back(plte);
 		}
-		qDebug()<<name<<num;
-	}
+	}*/
 }
 
 static int roundDivide(int a,int b){
@@ -294,15 +238,15 @@ bool Widget_Image::changeColor(int index,const QColor &destColor){
 	//change color
 	auto ok=changeColor(index,destColor,image.rect());
 	if(ok){
-		colorsList[index]=destColor;//save new color
+		*colorsList.data(index)=qColor2uint32(destColor);//save new color
 	}
 	return ok;
 }
 bool Widget_Image::changeColor(int index,const QColor &destColor,const QRect &rect){
 	if(index>=colorsList.size())return false;
-	auto srcColor=colorsList[index];
+	auto srcColor=*colorsList.data(index);
 	FOREACH_PIXEL_IN_RECT(rect.left(),rect.top(),rect.right(),rect.bottom(),
-		if(color==srcColor)image.setPixelColor(x,y,destColor);
+		if(qRgb2uint32(image.pixel(x,y))==srcColor)image.setPixelColor(x,y,destColor);
 	);
 	return true;
 }
@@ -322,7 +266,7 @@ void Widget_Image::startFlash(const QColor &flashColor){
 	flashImage.setColor(1,flashColorX.rgba());
 	flashImage.fill(Qt::transparent);
 	//make flash image
-	FOREACH_PIXEL(if(color==flashColor)flashImage.setPixel(x,y,1););
+	FOREACH_PIXEL(if(image.pixelColor(x,y)==flashColor)flashImage.setPixel(x,y,1););
 
 	//start flash
 	stopFlash();
@@ -359,13 +303,15 @@ void Widget_Image::mouseMoveEvent(QMouseEvent *ev){
 	mousePos=ev->pos();
 	QPoint p=mouseToImage(mousePos);
 	QColor color=image.pixelColor(p);
-	int index=colorsList.indexOf(color);
+	auto index=colorsList.data(qColor2uint32(color));
 	//show tip
-	QToolTip::showText(ev->globalPos(),
-		QString::asprintf("(%d,%d)==(%.2X,%.2X,%.2X,a=%.2X),index==%d",
-			p.x(),p.y(),
-			color.red(),color.green(),color.blue(),color.alpha(),
-			index));
+	if(index){
+		QToolTip::showText(ev->globalPos(),
+			QString::asprintf("(%d,%d)==(%.2X,%.2X,%.2X,a=%.2X),index==%d",
+				p.x(),p.y(),
+				color.red(),color.green(),color.blue(),color.alpha(),
+				index));
+	}
 	//update
 	if(cursorPos!=p){
 		cursorPos=p;
