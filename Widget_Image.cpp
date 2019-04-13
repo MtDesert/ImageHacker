@@ -102,10 +102,60 @@ void Widget_Image::loadFilePng(const QString &filename){
 		}
 	}
 	update();
+	//生成颜色表
+	makeColorsList(filePng);
 	//内存回收
 	filePng.reset();
 	bitmap32.deleteBitmap();
 }
+void Widget_Image::makeColorsList(const FilePNG &filePng){
+	colorsList.clear();
+	auto ihdr=filePng.findIHDR();
+	auto plte=filePng.findPLTE();
+	if(ihdr&&plte){
+		bool hasColor=false,hasAlpha=false;//确定色表类型
+		if(ihdr->getColorMask_Color(hasColor) && ihdr->getColorMask_Alpha(hasAlpha)){
+			qDebug()<<hasColor<<hasAlpha;
+			//获取颜色数
+			uint amount=hasColor?
+				(hasAlpha ? plte->rgbaAmount() : plte->rgbAmount()):
+				(hasAlpha ? plte->grayAlphaAmount() : plte->grayAmount());
+			auto trns=filePng.findtRNS();
+			//获取各个颜色值
+			QColor color;ColorRGBA rgba;
+			uint16 grayAlpha;
+			uint8 u8;
+			for(uint i=0;i<amount;++i){
+				if(hasColor){
+					if(hasAlpha){
+						plte->getRGBA(i,rgba);
+						color.setRgb(rgba.red,rgba.green,rgba.blue,rgba.alpha);
+					}else{//标准色表
+						plte->getColor(i,rgba);
+						color.setRgb(rgba.red,rgba.green,rgba.blue,rgba.alpha);
+					}
+				}else{
+					if(hasAlpha){
+						plte->getGrayAlpha(i,grayAlpha);
+						color.setRed(grayAlpha&0xFF);
+						color.setGreen(color.red());
+						color.setBlue(color.red());
+						color.setAlpha(grayAlpha>>8);
+					}else{
+						plte->getGray(i,u8);
+						color.setRgb(u8,u8,u8);
+						if(trns && trns->getAlpha(i,u8)){
+							color.setAlpha(u8);
+						}
+					}
+				}
+				qDebug()<<color;
+				colorsList.push_back(color);
+			}
+		}
+	}
+}
+
 void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha)const{
 	//转换成Bitmap32格式
 	Bitmap_32bit bitmap32;

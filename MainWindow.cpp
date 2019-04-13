@@ -10,10 +10,34 @@
 #include<QKeyEvent>
 #include<QDebug>
 
+struct TestFile{
+	QString filename;
+	int bitDepth;
+	bool hasPalette,hasColor,hasAlpha;
+};
+TestFile allFiles[]={
+	{"0g01",1,false,false,false},
+	{"0g02",2,false,false,false},
+	{"0g04",4,false,false,false},
+	{"0g08",8,false,false,false},
+	{"0g16",16,false,false,false},
+	{"2c08",8,false,true,false},
+	{"2c16",16,false,true,false},
+	{"3p01",1,true,true,false},
+	{"3p02",2,true,true,false},
+	{"3p04",4,true,true,false},
+	{"3p08",8,true,true,false},
+	{"4a08",8,false,false,true},
+	{"4a16",16,false,false,true},
+	{"6a08",8,false,true,true},
+	{"6a16",16,false,true,true},
+};
+
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	setupUi(this);
 	//color table
 	tableModel_SrcColor.image=&widget_SrcImage->image;
+	tableModel_SrcColor.colorList=&widget_SrcImage->colorsList;
 	tableModel_DestColor.image=&widget_DestImage->image;
 	tableModel_DestColor.colorList=&widget_DestImage->colorsList;
 	tableModel_Palette.paletteList=&widget_DestImage->paletteList;
@@ -21,6 +45,14 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	tableView_SrcColor->setModel(&tableModel_SrcColor);
 	tableView_DestColor->setModel(&tableModel_DestColor);
 	tableView_Palette->setModel(&tableModel_Palette);
+	//debug
+	auto amount=sizeof(allFiles)/sizeof(TestFile);
+	for(auto i=0;i<amount;++i){
+		auto &testFile=allFiles[i];
+		widget_SrcImage->loadFilePng("~/图片/png/basn"+testFile.filename+".png");
+		widget_SrcImage->saveFilePng("~/图片/pngOut/"+testFile.filename+".png",testFile.bitDepth,testFile.hasPalette,testFile.hasColor,testFile.hasAlpha);
+		//break;
+	}
 }
 
 void MainWindow::on_actionImage_load_triggered(){
@@ -43,18 +75,21 @@ void MainWindow::on_actionImage_load_triggered(){
 void MainWindow::on_actionImage_loadPNG_triggered(){
 	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
 	if(!filename.isEmpty()){
-		//图像处理
+		//显示原图和色表
 		widget_SrcImage->loadFilePng(filename);
-		/*widget_DestImage->makeColorsList(widget_SrcImage->image);
-		widget_DestImage->makeImage(widget_SrcImage->image);
+		tableModel_SrcColor.reset();
+		//设定目标图
+		widget_DestImage->image=widget_SrcImage->image;
+		widget_DestImage->makeColorsList(widget_SrcImage->image);
+		/*widget_DestImage->makeImage(widget_SrcImage->image);
 		//code
 		widget_DestImage->paletteCode=widget_SrcImage->paletteCode;
-		widget_DestImage->parsePaletteCode();
+		widget_DestImage->parsePaletteCode();*/
 		//table model
 		tableModel_SrcColor.reset();
 		tableModel_DestColor.reset();
 		tableModel_Palette.reset();
-		textEdit_Code->setPlainText(widget_SrcImage->paletteCode);*/
+		//textEdit_Code->setPlainText(widget_SrcImage->paletteCode);
 	}
 }
 void MainWindow::on_actionImage_save_triggered(){
