@@ -29,10 +29,10 @@ TestFile allFiles[]={
 	{"3p02",2,true,true,false},
 	{"3p04",4,true,true,false},
 	{"3p08",8,true,true,false},
-	/*{"4a08",8,false,false,true},
+	{"4a08",8,false,false,true},
 	{"4a16",16,false,false,true},
 	{"6a08",8,false,true,true},
-	{"6a16",16,false,true,true},*/
+	{"6a16",16,false,true,true},
 };
 
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){

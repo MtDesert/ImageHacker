@@ -105,15 +105,11 @@ void Widget_Image::loadFilePng(const QString &filename){
 	bitmap32.deleteBitmap();
 }
 void Widget_Image::makeColorsList(const FilePNG &filePng){
-	colorsList.clear();
 	auto ihdr=filePng.findIHDR();
 	auto plte=filePng.findPLTE();
-	if(ihdr&&plte){
-		bool hasColor=false,hasAlpha=false;//确定色表类型
-		if(ihdr->getColorMask_Color(hasColor) && ihdr->getColorMask_Alpha(hasAlpha)){
-			plte->filePng_tRNS=filePng.findtRNS();
-			plte->getColorsList(hasColor,hasAlpha,colorsList);
-		}
+	if(ihdr && plte){
+		plte->filePng_tRNS=filePng.findtRNS();
+		plte->getColorsList(*ihdr,colorsList);
 	}
 }
 
