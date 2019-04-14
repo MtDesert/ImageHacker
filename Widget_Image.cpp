@@ -94,12 +94,18 @@ void Widget_Image::loadFilePng(const QString &filename){
 	for(decltype(h) y=0;y<h;++y){
 		for(decltype(w) x=0;x<w;++x){
 			bitmap32.getColor(x,y,color32);
-			image.setPixelColor(x,y,uint2QColor(color32));
+			image.setPixel(x,y,uint2Qrgb(color32));
 		}
 	}
 	update();
 	//生成颜色表
 	makeColorsList(filePng);
+	//debug
+	for(auto &chunk:filePng.allChunks){
+		uint32 len;
+		chunk->getChunkLength(len);
+		qDebug("%.4X %s %u",chunk->dataPointer-filePng.dataPointer,chunk->chunkName().data(),len);
+	}
 	//内存回收
 	filePng.reset();
 	bitmap32.deleteBitmap();
@@ -121,7 +127,7 @@ void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPa
 	uint32 color32;
 	for(decltype(h) y=0;y<h;++y){
 		for(decltype(w) x=0;x<w;++x){
-			color32=qColor2uint32(image.pixelColor(x,y));
+			color32=qRgb2uint32(image.pixel(x,y));
 			bitmap32.setColor(x,y,color32);
 		}
 	}
@@ -242,7 +248,7 @@ bool Widget_Image::changeColor(int index,const QColor &destColor,const QRect &re
 	if(index>=colorsList.size())return false;
 	auto srcColor=*colorsList.data(index);
 	FOREACH_PIXEL_IN_RECT(rect.left(),rect.top(),rect.right(),rect.bottom(),
-		if(qRgb2uint32(image.pixel(x,y))==srcColor)image.setPixelColor(x,y,destColor);
+		if(qRgb2uint32(image.pixel(x,y))==srcColor)image.setPixel(x,y,destColor.rgba());
 	);
 	return true;
 }
@@ -289,7 +295,7 @@ void Widget_Image::mousePressEvent(QMouseEvent *ev){
 				//draw
 				image.setPixel(cursorPos,index);
 			}else{//non-index
-				image.setPixelColor(cursorPos,penColor);
+				image.setPixel(cursorPos,penColor.rgba());
 			}
 		break;
 	}

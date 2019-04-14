@@ -58,9 +58,10 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 void MainWindow::on_actionImage_load_triggered(){
 	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
 	if(!filename.isEmpty()){
-		//image
+		//加载图像
 		widget_SrcImage->loadImage(filename);
-		widget_DestImage->makeColorsList(widget_SrcImage->image);
+		widget_DestImage->image=widget_SrcImage->image;
+		widget_DestImage->makeColorsList(widget_DestImage->image);
 		//code
 		widget_DestImage->paletteCode=widget_SrcImage->paletteCode;
 		widget_DestImage->parsePaletteCode();
@@ -83,13 +84,12 @@ void MainWindow::on_actionImage_loadPNG_triggered(){
 		if(widget_SrcImage->colorsList.size()>0){
 			widget_DestImage->colorsList=widget_SrcImage->colorsList;
 		}else{
-			widget_DestImage->makeColorsList(widget_SrcImage->image);
+			widget_DestImage->makeColorsList(widget_DestImage->image);
 		}
 		//更新TableModel数据
 		tableModel_SrcColor.reset();
 		tableModel_DestColor.reset();
 		tableModel_Palette.reset();
-		//textEdit_Code->setPlainText(widget_SrcImage->paletteCode);
 	}
 }
 void MainWindow::on_actionImage_save_triggered(){
@@ -138,23 +138,24 @@ void MainWindow::on_tableView_SrcColor_pressed(const QModelIndex &index){
 	menu.exec(QCursor::pos());
 }
 void MainWindow::on_actionSrcTable_Insert_triggered(){
-	slotSrcTableColorCount(1);
+	widget_SrcImage->colorsList.push_back(0);
 }
 void MainWindow::on_actionSrcTable_Delete_triggered(){
-	slotSrcTableColorCount(-1);
+	widget_SrcImage->colorsList.pop_back();
 }
 void MainWindow::on_actionSrcTable_Edit_triggered(){
 	IF_VALID_SRC_INDEX
-	QColor color;
 	int row=index.row();
-	widget_SrcImage->imageColor(row,color);
-	//change color
+	auto p=widget_SrcImage->colorsList.data(row);
+	if(!p)return;
+	//编辑颜色
+	QColor color=uint2QColor(*p);
 	color=QColorDialog::getColor(color,this,tr("Color"),
 		QColorDialog::ShowAlphaChannel|
 		QColorDialog::DontUseNativeDialog);
 	//write
 	if(color.isValid()){
-		widget_SrcImage->image.setColor(row,color.rgba());
+		*widget_SrcImage->colorsList.data(row)=qColor2uint32(color);
 	}
 }
 
@@ -215,11 +216,6 @@ void MainWindow::on_actionPalette_MakeDestImage_triggered(){
 	widget_DestImage->updateByAllPalettes();
 }
 
-void MainWindow::slotSrcTableColorCount(int delta){
-	QImage &image(widget_SrcImage->image);
-	image.setColorCount(image.colorCount()+delta);
-	tableModel_SrcColor.reset();
-}
 void MainWindow::slotMoveUpDown(int delta){
 	IF_VALID_DEST_INDEX
 	auto row=index.row();

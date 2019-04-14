@@ -6,7 +6,11 @@
 
 //颜色转换(自定义结构->Qt结构)
 inline QRgb rgba2Qrgb(const ColorRGBA &rgba){return rgba.toBGRA();}
-inline QColor rgba2QColor(const ColorRGBA &rgba){return QColor(rgba2Qrgb(rgba));}
+inline QColor rgba2QColor(const ColorRGBA &rgba){
+	QColor color(rgba2Qrgb(rgba));//API文档中提到QRgb的alpha不会传递进去,所以要另外设置
+	color.setAlpha(rgba.alpha);
+	return color;
+}
 inline QRgb uint2Qrgb(const uint32 value){return rgba2Qrgb(ColorRGBA(value));}
 inline QColor uint2QColor(const uint32 value){return rgba2QColor(ColorRGBA(value));}
 

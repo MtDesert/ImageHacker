@@ -45,7 +45,6 @@ public slots:
 	void on_actionPalette_MakePalette_triggered();
 	void on_actionPalette_MakeDestImage_triggered();
 
-	void slotSrcTableColorCount(int delta);
 	void slotMoveUpDown(int delta);
 protected:
 	void keyReleaseEvent(QKeyEvent*);
