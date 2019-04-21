@@ -1,6 +1,6 @@
 #include"MainWindow.h"
+#include"Dialog_SaveBMP.h"
 #include"Dialog_SavePNG.h"
-#include"FileStructs/FilePNG.h"
 
 #include"common.h"
 
@@ -10,30 +10,8 @@
 #include<QMessageBox>
 
 #include<QKeyEvent>
+#include<QDir>
 #include<QDebug>
-
-struct TestFile{
-	QString filename;
-	int bitDepth;
-	bool hasPalette,hasColor,hasAlpha;
-};
-TestFile allFiles[]={
-	{"0g01",1,false,false,false},
-	{"0g02",2,false,false,false},
-	{"0g04",4,false,false,false},
-	{"0g08",8,false,false,false},
-	{"0g16",16,false,false,false},
-	{"2c08",8,false,true,false},
-	{"2c16",16,false,true,false},
-	{"3p01",1,true,true,false},
-	{"3p02",2,true,true,false},
-	{"3p04",4,true,true,false},
-	{"3p08",8,true,true,false},
-	{"4a08",8,false,false,true},
-	{"4a16",16,false,false,true},
-	{"6a08",8,false,true,true},
-	{"6a16",16,false,true,true},
-};
 
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	setupUi(this);
@@ -45,14 +23,6 @@ MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	tableView_SrcColor->setModel(&tableModel_SrcColor);
 	tableView_DestColor->setModel(&tableModel_DestColor);
 	tableView_Palette->setModel(&tableModel_Palette);
-	//debug
-	/*auto amount=sizeof(allFiles)/sizeof(TestFile);
-	for(auto i=0;i<amount;++i){
-		auto &testFile=allFiles[i];
-		widget_SrcImage->loadFilePng("~/图片/png/basn"+testFile.filename+".png");
-		widget_SrcImage->saveFilePng("~/图片/pngOut/"+testFile.filename+".png",testFile.bitDepth,testFile.hasPalette,testFile.hasColor,testFile.hasAlpha);
-		//break;
-	}*/
 }
 
 void MainWindow::on_actionImage_load_triggered(){
@@ -72,11 +42,13 @@ void MainWindow::on_actionImage_load_triggered(){
 		textEdit_Code->setPlainText(widget_SrcImage->paletteCode);
 	}
 }
-void MainWindow::on_actionImage_loadPNG_triggered(){
+
+void MainWindow::on_actionImage_loadBMP_triggered(){
 	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
 	if(!filename.isEmpty()){
 		//显示原图和色表
-		widget_SrcImage->loadFilePng(filename);
+		widget_SrcImage->loadFileBmp(filename);
+		afterLoadImage();
 		tableModel_SrcColor.reset();
 		//设定目标图
 		widget_DestImage->image=widget_SrcImage->image;
@@ -92,6 +64,14 @@ void MainWindow::on_actionImage_loadPNG_triggered(){
 		tableModel_Palette.reset();
 	}
 }
+void MainWindow::on_actionImage_loadPNG_triggered(){
+	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
+	if(!filename.isEmpty()){
+		//显示原图和色表
+		widget_SrcImage->loadFilePng(filename);
+		afterLoadImage();
+	}
+}
 void MainWindow::on_actionImage_save_triggered(){
 	QString filename=QFileDialog::getSaveFileName(this,tr("Save Image"),"","PNG Image(*.png)");
 	if(!filename.isEmpty()){
@@ -102,6 +82,15 @@ void MainWindow::on_actionImage_save_palette_triggered(){
 	QString filename=QFileDialog::getSaveFileName(this,tr("Save Palette Image"),"","PNG Image(*.png)");
 	if(!filename.isEmpty()){
 		widget_DestImage->saveImage(filename,textEdit_Code->toPlainText());
+	}
+}
+void MainWindow::on_actionImage_saveBMP_triggered(){
+	Dialog_SaveBMP dialog;
+	int answer=dialog.exec();
+	if(answer==QDialog::Accepted){
+		widget_SrcImage->saveFileBmp(dialog.lineEdit_OutputFilename->text(),
+			dialog.spinBox_bitDepth->value(),
+			dialog.checkBox_useCustomColorsList->isChecked()?&widget_DestImage->colorsList:nullptr);
 	}
 }
 void MainWindow::on_actionImage_savePNG_triggered(){
@@ -236,6 +225,20 @@ void MainWindow::slotMoveUpDown(int delta){
 	}
 }
 
+void MainWindow::afterLoadImage(){
+	//设定目标图
+	widget_DestImage->image=widget_SrcImage->image;
+	//设置目标色表
+	if(widget_SrcImage->colorsList.size()>0){
+		widget_DestImage->colorsList=widget_SrcImage->colorsList;
+	}else{
+		widget_DestImage->makeColorsList(widget_DestImage->image);
+	}
+	//更新TableModel数据
+	tableModel_SrcColor.reset();
+	tableModel_DestColor.reset();
+	tableModel_Palette.reset();
+}
 void MainWindow::keyReleaseEvent(QKeyEvent *ev){
 	switch(ev->key()){
 		case Qt::Key_Minus:

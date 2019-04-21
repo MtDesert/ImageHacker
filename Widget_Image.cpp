@@ -8,6 +8,8 @@
 #include<QDebug>
 
 #include"FileStructs/FilePNG.h"
+#include"FileStructs/FileBMP.h"
+#include"Number.h"
 
 #define HAS_COLOR_TABLE image.colorCount()>0
 #define VALID_COLOR_INDEX(index) (index>=0 && index<image.colorCount())
@@ -88,27 +90,13 @@ void Widget_Image::loadFilePng(const QString &filename){
 	Bitmap_32bit bitmap32;
 	filePng.decodeTo(bitmap32);
 	//生成图像用于显示
-	auto w=bitmap32.getWidth(),h=bitmap32.getHeight();
-	uint32 color32=0;
-	image=QImage(w,h,QImage::Format_RGBA8888);
-	for(decltype(h) y=0;y<h;++y){
-		for(decltype(w) x=0;x<w;++x){
-			bitmap32.getColor(x,y,color32);
-			image.setPixel(x,y,uint2Qrgb(color32));
-		}
-	}
+	fromBitmap32(bitmap32);
 	update();
 	//生成颜色表
 	makeColorsList(filePng);
-	//debug
-	for(auto &chunk:filePng.allChunks){
-		uint32 len;
-		chunk->getChunkLength(len);
-		qDebug("%.4X %s %u",chunk->dataPointer-filePng.dataPointer,chunk->chunkName().data(),len);
-	}
 	//内存回收
-	filePng.reset();
 	bitmap32.deleteBitmap();
+	filePng.deleteDataPointer();
 }
 void Widget_Image::makeColorsList(const FilePNG &filePng){
 	auto ihdr=filePng.findIHDR();
@@ -118,10 +106,68 @@ void Widget_Image::makeColorsList(const FilePNG &filePng){
 		plte->getColorsList(*ihdr,colorsList);
 	}
 }
+void Widget_Image::makeColorsList(const FileBMP &fileBmp){
+	if(fileBmp.bgrasList.dataLength){
+		fileBmp.bgrasList.getColorsList(colorsList);
+	}
+}
 
 void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha,List<uint32> *colorsList)const{
 	//转换成Bitmap32格式
 	Bitmap_32bit bitmap32;
+	toBitmap32(bitmap32);
+	//保存
+	FilePNG filePng;
+	filePng.encodeFrom(bitmap32,bitDepth,hasPalette,hasColor,hasAlpha,colorsList);
+	filePng.saveFilePNG(filename.toStdString());
+	//内存回收
+	bitmap32.deleteBitmap();
+	filePng.deleteDataPointer(true);
+}
+
+void Widget_Image::loadFileBmp(const QString &filename){
+	//加载文件并分析
+	FileBMP fileBmp;
+	fileBmp.loadFile(filename.toStdString());
+	fileBmp.parseData();
+	//进行解码
+	Bitmap_32bit bitmap32;
+	fileBmp.decodeTo(bitmap32);
+	bitmap32.coordinateType=Bitmap_32bit::CoordinateType_Screen;//Qt使用屏幕坐标系
+	//生成图像用于显示
+	fromBitmap32(bitmap32);
+	update();
+	//生成色表
+	makeColorsList(fileBmp);
+	//内存回收
+	bitmap32.deleteBitmap();
+	fileBmp.deleteDataPointer();
+}
+void Widget_Image::saveFileBmp(const QString &filename,uint16 bitCount,List<uint32> *colorsList)const{
+	//转换成Bitmap32格式
+	Bitmap_32bit bitmap32;
+	toBitmap32(bitmap32);
+	//保存
+	FileBMP fileBmp;
+	fileBmp.encodeFrom(bitmap32,bitCount,colorsList);
+	fileBmp.saveFileBMP(filename.toStdString());
+	//内存回收
+	bitmap32.deleteBitmap();
+	fileBmp.deleteDataPointer(true);
+}
+
+void Widget_Image::fromBitmap32(const Bitmap_32bit &bitmap32){
+	auto w=bitmap32.getWidth(),h=bitmap32.getHeight();
+	uint32 color32=0;
+	image=QImage(w,h,QImage::Format_RGBA8888);
+	for(decltype(h) y=0;y<h;++y){
+		for(decltype(w) x=0;x<w;++x){
+			bitmap32.getColor(x,y,color32);
+			image.setPixel(x,y,uint2Qrgb(color32));
+		}
+	}
+}
+void Widget_Image::toBitmap32(Bitmap_32bit &bitmap32)const{
 	auto w=image.width(),h=image.height();
 	bitmap32.newBitmap(w,h);
 	uint32 color32;
@@ -131,13 +177,6 @@ void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPa
 			bitmap32.setColor(x,y,color32);
 		}
 	}
-	//保存
-	FilePNG filePng;
-	filePng.encodeFrom(bitmap32,bitDepth,hasPalette,hasColor,hasAlpha,colorsList);
-	filePng.saveFilePNG(filename.toStdString());
-	//内存回收
-	bitmap32.deleteBitmap();
-	filePng.reset();
 }
 
 void Widget_Image::makeColorsList(const QImage &image){
@@ -194,15 +233,8 @@ void Widget_Image::parsePaletteCode(){
 	}*/
 }
 
-static int roundDivide(int a,int b){
-	int ret=a/b;
-	int remain=a%b;
-	if(remain*2>=b)++ret;
-	return ret;
-}
-
 #define CHANGE_COLOR(name) \
-color.set##name(roundDivide(q##name(rgba) * plte.brightness * gray,0xFF * plte.maxGray));\
+color.set##name(Number::divideRound(q##name(rgba) * plte.brightness * gray,0xFF * plte.maxGray));\
 
 void Widget_Image::updateByPalette(const Palette &plte){
 	//int maxGray=qGray(plte.color.rgba());

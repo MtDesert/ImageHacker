@@ -3,6 +3,7 @@
 
 #include<QWidget>
 #include"FileStructs/FilePNG.h"
+#include"FileStructs/FileBMP.h"
 
 struct Palette{
 	Palette();
@@ -25,9 +26,18 @@ public:
 	//PNG文件读写
 	void loadFilePng(const QString &filename);
 	void saveFilePng(const QString &filename,uint8 bitDepth,bool hasPalette,bool hasColor,bool hasAlpha,List<uint32> *colorsList=nullptr)const;
-	void makeColorsList(const FilePNG &filePng);//创建色表
+	//BMP文件读写
+	void loadFileBmp(const QString &filename);
+	void saveFileBmp(const QString &filename,uint16 bitCount,List<uint32> *colorsList=nullptr)const;
+	//创建色表
+	void makeColorsList(const FilePNG &filePng);
+	void makeColorsList(const FileBMP &fileBmp);
 
-	bool imageColor(int index,QColor &color)const;//get color from image.colorTable,return whether success
+	//转换
+	void fromBitmap32(const Bitmap_32bit &bitmap32);
+	void toBitmap32(Bitmap_32bit &bitmap32)const;
+
+	bool imageColor(int index,QColor &color)const;
 
 	//颜色变换
 	bool changeColor(int index,const QColor &destColor);

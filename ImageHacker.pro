@@ -19,6 +19,7 @@ INCLUDEPATH += \
 ../../CppProject/libGamesEngines/Cpp11 \
 ../../CppProject/libGamesEngines/Cpp11/Containers \
 ../../CppProject/libGamesEngines/Zipper \
+../../CppProject/libGamesEngines/Math \
 ../../CppProject/libGamesEngines/Image \
 ../../CppProject/libGamesEngines/Image/ColorSpaces
 
@@ -30,7 +31,8 @@ SOURCES += \
 	TableModel_Color.cpp \
 	Widget_Image.cpp \
 	TableModel_Palette.cpp \
-	Dialog_SavePNG.cpp
+	Dialog_SavePNG.cpp \
+	Dialog_SaveBMP.cpp
 
 HEADERS += \
 		MainWindow.h \
@@ -38,11 +40,13 @@ HEADERS += \
 	Widget_Image.h \
 	TableModel_Palette.h \
 	Dialog_SavePNG.h \
-	common.h
+	common.h \
+	Dialog_SaveBMP.h
 
 FORMS += \
 		MainWindow.ui \
-	Dialog_SavePNG.ui
+	Dialog_SavePNG.ui \
+	Dialog_SaveBMP.ui
 
 SUBDIRS += \
 	ImageHacker.pro

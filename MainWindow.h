@@ -17,10 +17,12 @@ public:
 public slots:
 	//menu
 	void on_actionImage_load_triggered();
+	void on_actionImage_loadBMP_triggered();
 	void on_actionImage_loadPNG_triggered();
 
 	void on_actionImage_save_triggered();
 	void on_actionImage_save_palette_triggered();
+	void on_actionImage_saveBMP_triggered();
 	void on_actionImage_savePNG_triggered();
 
 	void on_actionExit_triggered();
@@ -47,6 +49,7 @@ public slots:
 
 	void slotMoveUpDown(int delta);
 protected:
+	void afterLoadImage();
 	void keyReleaseEvent(QKeyEvent*);
 };
 

@@ -62,10 +62,12 @@
      <string>文件(&amp;F)</string>
     </property>
     <addaction name="actionImage_load"/>
+    <addaction name="actionImage_loadBMP"/>
     <addaction name="actionImage_loadPNG"/>
     <addaction name="separator"/>
     <addaction name="actionImage_save"/>
     <addaction name="actionImage_save_palette"/>
+    <addaction name="actionImage_saveBMP"/>
     <addaction name="actionImage_savePNG"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -182,6 +184,16 @@
   <action name="actionImage_loadPNG">
    <property name="text">
     <string>打开PNG</string>
+   </property>
+  </action>
+  <action name="actionImage_saveBMP">
+   <property name="text">
+    <string>保存BMP</string>
+   </property>
+  </action>
+  <action name="actionImage_loadBMP">
+   <property name="text">
+    <string>打开BMP</string>
    </property>
   </action>
  </widget>
