@@ -44,7 +44,7 @@ void MainWindow::on_actionImage_load_triggered(){
 }
 
 void MainWindow::on_actionImage_loadBMP_triggered(){
-	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
+	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"),QString(),QString("*.bmp"));
 	if(!filename.isEmpty()){
 		//显示原图和色表
 		widget_SrcImage->loadFileBmp(filename);
@@ -65,7 +65,7 @@ void MainWindow::on_actionImage_loadBMP_triggered(){
 	}
 }
 void MainWindow::on_actionImage_loadPNG_triggered(){
-	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"));
+	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"),QString(),QString("*.png"));
 	if(!filename.isEmpty()){
 		//显示原图和色表
 		widget_SrcImage->loadFilePng(filename);
@@ -159,19 +159,35 @@ void MainWindow::on_tableView_DestColor_pressed(const QModelIndex &index){
 	menu.addAction(actionDestTable_Edit);
 	menu.exec(QCursor::pos());
 }
-void MainWindow::on_actionDestTable_Insert_triggered(){}
-void MainWindow::on_actionDestTable_Delete_triggered(){}
+void MainWindow::on_actionDestTable_Insert_triggered(){
+	IF_VALID_DEST_INDEX
+	widget_DestImage->colorsList.insert(index.row(),0);
+	tableModel_DestColor.reset();
+}
+void MainWindow::on_actionDestTable_Delete_triggered(){
+	IF_VALID_DEST_INDEX
+	widget_DestImage->colorsList.erase(index.row());
+	tableModel_DestColor.reset();
+}
 void MainWindow::on_actionDestTable_Edit_triggered(){
 	IF_VALID_DEST_INDEX
 	int row=index.row();
-	QColor color=uint2QColor(*widget_DestImage->colorsList.data(row));
-	//change color
-	color=QColorDialog::getColor(color,this,tr("Color"),
+	QColor oldColor=uint2QColor(*widget_DestImage->colorsList.data(row));
+	//设置颜色
+	QColor newColor=QColorDialog::getColor(oldColor,this,tr("Color"),
 		QColorDialog::ShowAlphaChannel|
 		QColorDialog::DontUseNativeDialog);
-	//write
-	if(color.isValid()){
-		*widget_DestImage->colorsList.data(row)=qColor2uint32(color);
+	//写入
+	if(newColor.isValid()){
+		int answer=QMessageBox::question(this,tr("Change color"),
+			QString::asprintf("Change %s to %s?",
+				oldColor.name(QColor::HexArgb).toStdString().data(),
+				newColor.name(QColor::HexArgb).toStdString().data()));
+		//批量变色
+		if(answer==QMessageBox::Yes){
+			widget_DestImage->changeColor(row,newColor);
+		}
+		*widget_DestImage->colorsList.data(row)=qColor2uint32(newColor);
 	}
 }
 void MainWindow::on_actionDestImage_Remake_triggered(){}

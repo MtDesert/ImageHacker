@@ -12,7 +12,7 @@
 #include"Number.h"
 
 #define HAS_COLOR_TABLE image.colorCount()>0
-#define VALID_COLOR_INDEX(index) (index>=0 && index<image.colorCount())
+#define VALID_COLOR_INDEX(index) (index>=0 && index<colorsList.size())
 
 #define FOREACH_PIXEL_IN_RECT(x0,y0,x1,y1,code)\
 for(int y=y0;y<y1;++y){\
@@ -279,16 +279,19 @@ bool Widget_Image::changeColor(int index,const QColor &destColor){
 bool Widget_Image::changeColor(int index,const QColor &destColor,const QRect &rect){
 	if(index>=colorsList.size())return false;
 	auto srcColor=*colorsList.data(index);
-	FOREACH_PIXEL_IN_RECT(rect.left(),rect.top(),rect.right(),rect.bottom(),
-		if(qRgb2uint32(image.pixel(x,y))==srcColor)image.setPixel(x,y,destColor.rgba());
+	FOREACH_PIXEL_IN_RECT(rect.left(),rect.top(),rect.right()+1,rect.bottom()+1,
+		if(qRgb2uint32(image.pixel(x,y))==srcColor){
+			image.setPixel(x,y,destColor.rgba());
+		}
 	);
 	return true;
 }
 
 void Widget_Image::startFlash(int index){
 	if(VALID_COLOR_INDEX(index)){
-		QColor color(image.color(index));
-		startFlash(color);
+		auto clr=colorsList.data(index);
+		qDebug()<<hex<<*clr;
+		startFlash(uint2QColor(*clr));
 	}
 }
 void Widget_Image::startFlash(const QColor &flashColor){
@@ -338,6 +341,14 @@ void Widget_Image::mouseMoveEvent(QMouseEvent *ev){
 	QPoint p=mouseToImage(mousePos);
 	QColor color=image.pixelColor(p);
 	auto index=colorsList.data(qColor2uint32(color));
+	//绘图
+	if(cursorPos!=p){
+		cursorPos=p;
+		if(ev->buttons()==Qt::LeftButton){
+			image.setPixel(cursorPos,penColor.rgba());
+		}
+		update();
+	}
 	//show tip
 	if(index){
 		QToolTip::showText(ev->globalPos(),
@@ -345,11 +356,6 @@ void Widget_Image::mouseMoveEvent(QMouseEvent *ev){
 				p.x(),p.y(),
 				color.red(),color.green(),color.blue(),color.alpha(),
 				index));
-	}
-	//update
-	if(cursorPos!=p){
-		cursorPos=p;
-		update();
 	}
 }
 void Widget_Image::mouseReleaseEvent(QMouseEvent *ev){}
