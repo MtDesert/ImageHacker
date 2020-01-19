@@ -5,17 +5,26 @@
 #include"TableModel_Color.h"
 #include"TableModel_Palette.h"
 
+#include"TableModel_PNG.h"
+
 class MainWindow : public QMainWindow, private Ui::MainWindow
 {
 	Q_OBJECT
 public:
 	explicit MainWindow(QWidget *parent = 0);
 
+	//表格
 	TableModel_Color tableModel_SrcColor;
 	TableModel_Color tableModel_DestColor;
 	TableModel_Palette tableModel_Palette;
+	//图片文件结构体
+	FilePNG filePng;
+	//PNG专用表格
+	TableModel_PNG_Chunk tableModel_PNG_Chunk;
+	TableModel_PNG_IHDR tableModel_PNG_IHDR;
+	TableModel_PNG_PLTE tableModel_PNG_PLTE;
 public slots:
-	//menu
+	//菜单-加载文件
 	void on_actionImage_load_triggered();
 	void on_actionImage_loadBMP_triggered();
 	void on_actionImage_loadPNG_triggered();
@@ -34,12 +43,18 @@ public slots:
 	void on_actionSrcTable_Delete_triggered();
 	void on_actionSrcTable_Edit_triggered();
 
-	//dest color table
+	//目标颜色表
 	void on_tableView_DestColor_activated(const QModelIndex &index);
 	void on_tableView_DestColor_pressed(const QModelIndex &index);
 	void on_actionDestTable_Insert_triggered();
 	void on_actionDestTable_Delete_triggered();
 	void on_actionDestTable_Edit_triggered();
+	void on_actionDestTable_MoveUp_triggered();
+	void on_actionDestTable_MoveDown_triggered();
+	//目标颜色表-差异比对
+	void on_actionDestTable_DeltaComp_triggered();
+	void on_actionDestTable_SortByDelta_triggered();
+	void on_actionDestTable_RemoveDelta_triggered();
 	void on_actionDestImage_Remake_triggered();
 
 	//palette table

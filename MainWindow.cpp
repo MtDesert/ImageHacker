@@ -13,16 +13,23 @@
 #include<QDir>
 #include<QDebug>
 
+#define SET_MODEL(name) tableView_##name->setModel(&tableModel_##name);
+
 MainWindow::MainWindow(QWidget *parent):QMainWindow(parent){
 	setupUi(this);
 	//color table
 	tableModel_SrcColor.colorList=&widget_SrcImage->colorsList;
 	tableModel_DestColor.colorList=&widget_DestImage->colorsList;
 	tableModel_Palette.paletteList=&widget_DestImage->paletteList;
-
-	tableView_SrcColor->setModel(&tableModel_SrcColor);
-	tableView_DestColor->setModel(&tableModel_DestColor);
-	tableView_Palette->setModel(&tableModel_Palette);
+	//table model(png)
+	tableModel_PNG_Chunk.filePng=&filePng;
+	//table view
+	SET_MODEL(SrcColor)
+	SET_MODEL(DestColor)
+	SET_MODEL(Palette)
+	SET_MODEL(PNG_Chunk)
+	SET_MODEL(PNG_IHDR)
+	SET_MODEL(PNG_PLTE)
 }
 
 void MainWindow::on_actionImage_load_triggered(){
@@ -65,10 +72,20 @@ void MainWindow::on_actionImage_loadBMP_triggered(){
 	}
 }
 void MainWindow::on_actionImage_loadPNG_triggered(){
-	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"),QString(),QString("*.png"));
+	QString filename=QFileDialog::getOpenFileName(this,tr("Original Image"),"","PNG Image(*.png)");
 	if(!filename.isEmpty()){
+		//载入PNG并分析
+		filePng.memoryFree();
+		filePng.loadFile(filename.toStdString());
+		filePng.parseData();
+		//显示分析结果
+		tableModel_PNG_IHDR.ihdr=filePng.findIHDR();
+		tableModel_PNG_PLTE.plte=filePng.findPLTE();
+		tableModel_PNG_Chunk.reset();
+		tableModel_PNG_IHDR.reset();
+		tableModel_PNG_PLTE.reset();
 		//显示原图和色表
-		widget_SrcImage->loadFilePng(filename);
+		widget_SrcImage->loadFilePng(filePng);
 		afterLoadImage();
 	}
 }
@@ -150,6 +167,8 @@ void MainWindow::on_actionSrcTable_Edit_triggered(){
 
 void MainWindow::on_tableView_DestColor_activated(const QModelIndex &index){
 	widget_DestImage->startFlash(index.row());
+	tableModel_DestColor.compareColor=uint2QColor(*widget_DestImage->colorsList.data(index.row()));
+	tableModel_DestColor.reset();
 }
 void MainWindow::on_tableView_DestColor_pressed(const QModelIndex &index){
 	if(QApplication::mouseButtons()!=Qt::RightButton)return;
@@ -188,6 +207,54 @@ void MainWindow::on_actionDestTable_Edit_triggered(){
 			widget_DestImage->changeColor(row,newColor);
 		}
 		*widget_DestImage->colorsList.data(row)=qColor2uint32(newColor);
+	}
+}
+void MainWindow::on_actionDestTable_MoveUp_triggered(){
+	IF_VALID_DEST_INDEX
+	tableModel_DestColor.colorList->movePrev(index.row());
+	tableModel_DestColor.reset();
+}
+void MainWindow::on_actionDestTable_MoveDown_triggered(){
+	IF_VALID_DEST_INDEX
+	tableModel_DestColor.colorList->moveNext(index.row());
+	tableModel_DestColor.reset();
+}
+void MainWindow::on_actionDestTable_DeltaComp_triggered(){
+	QColor color=QColorDialog::getColor(tableModel_DestColor.compareColor,this,tr("Compare Color"),
+		QColorDialog::ShowAlphaChannel|QColorDialog::DontUseNativeDialog);
+	if(color.isValid()){
+		tableModel_DestColor.compareColor=color;
+		tableModel_DestColor.reset();//计算差异值
+	}
+}
+void MainWindow::on_actionDestTable_SortByDelta_triggered(){
+	auto cmpColor=qColor2ColorRGBA(tableModel_DestColor.compareColor);
+	ColorRGBA colorA,colorB;
+	tableModel_DestColor.colorList->sort([&](const uint32 &a,const uint32 &b){
+		colorA.fromRGBA(a);
+		colorB.fromRGBA(b);
+		return colorA.deltaSum(cmpColor) < colorB.deltaSum(cmpColor);
+	});
+	tableModel_DestColor.reset();
+}
+void MainWindow::on_actionDestTable_RemoveDelta_triggered(){
+	bool ok;
+	int tolerance=QInputDialog::getInt(this,tr("容差"),tr("请输入允许的容差"),0,0,255*3,1,&ok);
+	if(ok){//开始进行调色
+		ColorRGBA rgba,cmpColor=qColor2ColorRGBA(tableModel_DestColor.compareColor);
+		int idx=0;
+		for(auto &u32:widget_DestImage->colorsList){
+			rgba.fromRGBA(u32);
+			if(rgba.deltaSum(cmpColor)<=tolerance){
+				widget_DestImage->changeColor(idx,tableModel_DestColor.compareColor);//改变图像
+				u32=cmpColor.toRGBA();
+			}
+			//下一个
+			++idx;
+		}
+		//去掉重复
+		widget_DestImage->colorsList.unique();
+		tableModel_DestColor.reset();
 	}
 }
 void MainWindow::on_actionDestImage_Remake_triggered(){}
@@ -260,7 +327,7 @@ void MainWindow::keyReleaseEvent(QKeyEvent *ev){
 		case Qt::Key_Minus:
 			slotMoveUpDown(-1);
 		break;
-		case Qt::Key_Plus:
+		case Qt::Key_Equal:
 			slotMoveUpDown(1);
 		break;
 		default:qDebug()<<hex<<ev->key();

@@ -30,4 +30,13 @@ inline uint32 qColor2uint32(const QColor &color){
 	return qColor2ColorRGBA(color).toRGBA();
 }
 
+//差异比对
+#define COLOR_DELTA(name) abs(colorA.name()-colorB.name())
+inline int qColorDeltaSum(const QColor &colorA,const QColor &colorB){
+	auto ret=COLOR_DELTA(red);
+	ret+=COLOR_DELTA(green);
+	ret+=COLOR_DELTA(blue);
+	return ret;
+}
+
 #endif

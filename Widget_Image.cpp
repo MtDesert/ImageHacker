@@ -46,7 +46,7 @@ void Widget_Image::loadImage(const QString &filename){
 				block.dataPointer[block.dataLength]='\0';//Hack!
 				paletteCode=(char*)block.dataPointer;
 			}
-			filePng.deleteDataPointer();
+			filePng.memoryFree();
 		}
 		update();
 	}
@@ -67,7 +67,7 @@ void Widget_Image::saveImage(const QString &filename,const QString &code)const{
 	auto len=code.length();
 	FilePNG_Chunk chunk;//tEXt
 	if(len>0){
-		chunk.newDataPointer(12+len);//size(4)+name(4)+data(size)+crc(4)
+		chunk.memoryAllocate(12+len);//size(4)+name(4)+data(size)+crc(4)
 		chunk.setChunkLength(len);
 		chunk.setChunkName("tEXt");
 		memcpy(chunk.chunkDataBlock().dataPointer,code.toStdString().data(),len);
@@ -77,15 +77,11 @@ void Widget_Image::saveImage(const QString &filename,const QString &code)const{
 
 	//re-save file
 	filePng.saveFilePNG(filename.toStdString());
-	chunk.deleteDataPointer();
-	filePng.deleteDataPointer();
+	chunk.memoryFree();
+	filePng.memoryFree();
 }
 
-void Widget_Image::loadFilePng(const QString &filename){
-	//加载文件并分析
-	FilePNG filePng;
-	filePng.loadFile(filename.toStdString());
-	filePng.parseData();
+void Widget_Image::loadFilePng(const FilePNG &filePng){
 	//进行解码
 	Bitmap_32bit bitmap32;
 	filePng.decodeTo(bitmap32);
@@ -96,7 +92,6 @@ void Widget_Image::loadFilePng(const QString &filename){
 	makeColorsList(filePng);
 	//内存回收
 	bitmap32.deleteBitmap();
-	filePng.deleteDataPointer();
 }
 void Widget_Image::makeColorsList(const FilePNG &filePng){
 	auto ihdr=filePng.findIHDR();
@@ -122,7 +117,7 @@ void Widget_Image::saveFilePng(const QString &filename,uint8 bitDepth,bool hasPa
 	filePng.saveFilePNG(filename.toStdString());
 	//内存回收
 	bitmap32.deleteBitmap();
-	filePng.deleteDataPointer(true);
+	filePng.memoryFree(true);
 }
 
 void Widget_Image::loadFileBmp(const QString &filename){
@@ -141,7 +136,7 @@ void Widget_Image::loadFileBmp(const QString &filename){
 	makeColorsList(fileBmp);
 	//内存回收
 	bitmap32.deleteBitmap();
-	fileBmp.deleteDataPointer();
+	fileBmp.memoryFree();
 }
 void Widget_Image::saveFileBmp(const QString &filename,uint16 bitCount,List<uint32> *colorsList)const{
 	//转换成Bitmap32格式
@@ -153,7 +148,7 @@ void Widget_Image::saveFileBmp(const QString &filename,uint16 bitCount,List<uint
 	fileBmp.saveFileBMP(filename.toStdString());
 	//内存回收
 	bitmap32.deleteBitmap();
-	fileBmp.deleteDataPointer(true);
+	fileBmp.memoryFree(true);
 }
 
 void Widget_Image::fromBitmap32(const Bitmap_32bit &bitmap32){

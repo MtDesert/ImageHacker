@@ -2,11 +2,6 @@
 
 TableModel_Palette::TableModel_Palette(){}
 
-void TableModel_Palette::reset(){
-	beginResetModel();
-	endResetModel();
-}
-
 QVariant TableModel_Palette::headerData(int section, Qt::Orientation orientation, int role)const{
 	switch(orientation){
 		case Qt::Horizontal:

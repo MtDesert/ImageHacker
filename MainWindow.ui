@@ -37,6 +37,21 @@
      <string>目标图</string>
     </attribute>
    </widget>
+   <widget class="QTableView" name="tableView_PNG_Chunk">
+    <attribute name="title">
+     <string>PNG数据块</string>
+    </attribute>
+   </widget>
+   <widget class="QTableView" name="tableView_PNG_IHDR">
+    <attribute name="title">
+     <string>PNG图像头</string>
+    </attribute>
+   </widget>
+   <widget class="QTableView" name="tableView_PNG_PLTE">
+    <attribute name="title">
+     <string>PNG调色板</string>
+    </attribute>
+   </widget>
    <widget class="QTextEdit" name="textEdit_Code">
     <attribute name="title">
      <string>代码</string>
@@ -87,6 +102,13 @@
     <addaction name="actionDestTable_Insert"/>
     <addaction name="actionDestTable_Delete"/>
     <addaction name="actionDestTable_Edit"/>
+    <addaction name="separator"/>
+    <addaction name="actionDestTable_MoveUp"/>
+    <addaction name="actionDestTable_MoveDown"/>
+    <addaction name="separator"/>
+    <addaction name="actionDestTable_DeltaComp"/>
+    <addaction name="actionDestTable_SortByDelta"/>
+    <addaction name="actionDestTable_RemoveDelta"/>
     <addaction name="separator"/>
     <addaction name="actionDestImage_Remake"/>
    </widget>
@@ -194,6 +216,31 @@
   <action name="actionImage_loadBMP">
    <property name="text">
     <string>打开BMP</string>
+   </property>
+  </action>
+  <action name="actionDestTable_DeltaComp">
+   <property name="text">
+    <string>差异比对</string>
+   </property>
+  </action>
+  <action name="actionDestTable_MoveUp">
+   <property name="text">
+    <string>上移</string>
+   </property>
+  </action>
+  <action name="actionDestTable_MoveDown">
+   <property name="text">
+    <string>下移</string>
+   </property>
+  </action>
+  <action name="actionDestTable_SortByDelta">
+   <property name="text">
+    <string>按差异排序</string>
+   </property>
+  </action>
+  <action name="actionDestTable_RemoveDelta">
+   <property name="text">
+    <string>去差异化</string>
    </property>
   </action>
  </widget>
