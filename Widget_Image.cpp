@@ -1,5 +1,10 @@
 #include "Widget_Image.h"
+#include"TableView_Color.h"
 #include"common.h"
+
+#include"FileStructs/FilePNG.h"
+#include"FileStructs/FileBMP.h"
+#include"Number.h"
 
 #include<QToolTip>
 #include<QMouseEvent>
@@ -7,47 +12,19 @@
 #include<QPainter>
 #include<QDebug>
 
-#include"FileStructs/FilePNG.h"
-#include"FileStructs/FileBMP.h"
-#include"Number.h"
-
 #define HAS_COLOR_TABLE image.colorCount()>0
 #define VALID_COLOR_INDEX(index) (index>=0 && index<colorsList.size())
 
-#define FOREACH_PIXEL_IN_RECT(x0,y0,x1,y1,code)\
-for(int y=y0;y<y1;++y){\
-	for(int x=x0;x<x1;++x){\
-		code;\
-	}\
-}
-
-#define FOREACH_PIXEL(code)\
-auto w=image.width(),h=image.height();\
-FOREACH_PIXEL_IN_RECT(0,0,w,h,code)\
-
-Palette::Palette():maxGray(0),color(Qt::black),brightness(0xFF){}
-
 Widget_Image::Widget_Image(QWidget *parent):QWidget(parent),
-	flashTimerID(0),
-	flashStatus(false){
+	flashTimerID(0),flashStatus(false),
+	tolerance(0),editMode(Edit_Pen),
+	tableViewColor(NULL){
 	setMouseTracking(true);
 }
 
 void Widget_Image::loadImage(const QString &filename){
 	if(image.load(filename)){
-		//find the code if exist
-		if(HAS_COLOR_TABLE){
-			FilePNG filePng;
-			filePng.loadFile(filename.toStdString());
-			filePng.parseData();
-			auto chunk=filePng.findChunk("tEXt");
-			if(chunk){
-				auto block=chunk->chunkDataBlock();
-				block.dataPointer[block.dataLength]='\0';//Hack!
-				paletteCode=(char*)block.dataPointer;
-			}
-			filePng.memoryFree();
-		}
+		resize(image.size());
 		update();
 	}
 }
@@ -92,6 +69,16 @@ void Widget_Image::loadFilePng(const FilePNG &filePng){
 	makeColorsList(filePng);
 	//内存回收
 	bitmap32.deleteBitmap();
+}
+
+void Widget_Image::forEachPixel(const QRect &rect,function<void(int,int,QColor&)> pixelFunc){
+	QColor color;
+	for(int x=rect.left();x<=rect.right() && x<image.width();++x){
+		for(int y=rect.top();y<=rect.bottom() && y<image.height();++y){
+			color = image.pixelColor(x,y);
+			pixelFunc(x,y,color);
+		}
+	}
 }
 void Widget_Image::makeColorsList(const FilePNG &filePng){
 	auto ihdr=filePng.findIHDR();
@@ -183,75 +170,10 @@ void Widget_Image::makeColorsList(const QImage &image){
 		}
 	}else{//统计QImage中的颜色数
 		uint32 u32;
-		FOREACH_PIXEL(
-			u32=qRgb2uint32(image.pixel(x,y));
+		forEachPixel(image.rect(),[&](int x,int y,QColor &color){
+			u32=qColor2uint32(color);
 			if(!colorsList.contain(u32))colorsList.push_back(u32);
-		);
-	}
-}
-void Widget_Image::parsePaletteCode(){
-	/*int colorIndex=0;
-	paletteList.clear();
-	int start=0,end=0,len=paletteCode.length();
-	while(start<len){
-		//scan name
-		while(end<len && !paletteCode[end].isDigit())++end;
-		auto name=paletteCode.mid(start,end-start);
-		start=end;//next
-
-		if(start>=len)break;
-
-		//scan num
-		while(end<len && paletteCode[end].isDigit())++end;//scan num
-		auto strNum=paletteCode.mid(start,end-start);
-		start=end;
-		//got data
-		bool ok;
-		int num=strNum.toInt(&ok);
-		if(ok){
-			Palette plte;
-			plte.name=name;
-			for(int i=0;i<num;++i){
-				++colorIndex;
-				plte.allIndexes.append(colorIndex);
-				//check the gray scale
-				if(colorIndex<colorsList.size()){
-					auto newGray=qGray(colorsList[colorIndex].rgba());
-					if(newGray>=plte.maxGray){
-						plte.maxGray=newGray;
-						plte.color=colorsList[colorIndex];
-					}
-				}
-			}
-			paletteList.push_back(plte);
-		}
-	}*/
-}
-
-#define CHANGE_COLOR(name) \
-color.set##name(Number::divideRound(q##name(rgba) * plte.brightness * gray,0xFF * plte.maxGray));\
-
-void Widget_Image::updateByPalette(const Palette &plte){
-	//int maxGray=qGray(plte.color.rgba());
-	for(auto &index:plte.allIndexes){
-		if(plte.maxGray>0){
-			QColor color;
-			auto rgba=plte.color.rgba();
-			int gray=qGray(image.color(index));
-			//change color
-			CHANGE_COLOR(Red)
-			CHANGE_COLOR(Green)
-			CHANGE_COLOR(Blue)
-			color.setAlpha(qAlpha(rgba));
-			image.setColor(index,color.rgba());
-		}else{
-			image.setColor(index,0x00000000);
-		}
-	}
-}
-void Widget_Image::updateByAllPalettes(){
-	for(auto &plte:paletteList){
-		updateByPalette(plte);
+		});
 	}
 }
 
@@ -274,11 +196,53 @@ bool Widget_Image::changeColor(int index,const QColor &destColor){
 bool Widget_Image::changeColor(int index,const QColor &destColor,const QRect &rect){
 	if(index>=colorsList.size())return false;
 	auto srcColor=*colorsList.data(index);
-	FOREACH_PIXEL_IN_RECT(rect.left(),rect.top(),rect.right()+1,rect.bottom()+1,
-		if(qRgb2uint32(image.pixel(x,y))==srcColor){
+	forEachPixel(image.rect(),[&](int x,int y,QColor &color){
+		if(qColor2uint32(color)==srcColor){
 			image.setPixel(x,y,destColor.rgba());
 		}
-	);
+	});
+	return true;
+}
+bool Widget_Image::changeColor(const QColor &srcColor,const QColor &destColor){
+	bool ret=false;
+	forEachPixel(image.rect(),[&](int x,int y,QColor &color){
+		if(color==srcColor){
+			ret=true;
+			image.setPixelColor(x,y,destColor);
+		}
+	});
+	return ret;
+}
+bool Widget_Image::changeColorByColorsList(){
+	if(colorsList.size()<=0)return false;
+	double *distances=new double[colorsList.size()];
+	//准备缓冲
+	ColorRGBA rgbaA,rgbaB;
+	uint32 u32;
+	auto idx=0,minIdx=0;
+	double minimum=512;
+	forEachPixel(image.rect(),[&](int x,int y,QColor &color){
+		rgbaA=qColor2ColorRGBA(color);
+		idx=0,minIdx=0;
+		minimum=512;
+		for(const auto &u32:colorsList){//计算所有特征
+			rgbaB.fromRGBA(u32);
+			distances[idx]=rgbaA.distance(rgbaB);
+			//寻找最小值
+			if(distances[idx]<minimum){
+				minIdx=idx;
+				minimum=distances[idx];
+			}
+			//下一个
+			++idx;
+		}
+		//改写数据
+		u32=*(colorsList.data(minIdx));
+		rgbaB.fromRGBA(u32);
+		image.setPixelColor(x,y,rgba2QColor(rgbaB));
+	});
+	//结束
+	delete []distances;
 	return true;
 }
 
@@ -298,16 +262,113 @@ void Widget_Image::startFlash(const QColor &flashColor){
 	flashImage.setColor(1,flashColorX.rgba());
 	flashImage.fill(Qt::transparent);
 	//make flash image
-	FOREACH_PIXEL(if(image.pixelColor(x,y)==flashColor)flashImage.setPixel(x,y,1););
+	forEachPixel(image.rect(),[&](int x,int y,QColor &color){
+		if(color==flashColor)flashImage.setPixel(x,y,1);
+	});
 
 	//start flash
 	stopFlash();
 	flashTimerID=startTimer(500);
 }
-void Widget_Image::stopFlash(){
-	killTimer(flashTimerID);
-}
+void Widget_Image::stopFlash(){killTimer(flashTimerID);}
 
+//各种画图编辑函数
+const QPoint directions[4]={QPoint(-1,0),QPoint(1,0),QPoint(0,-1),QPoint(0,1)};
+void Widget_Image::drawPoint(const QPoint &pos){
+	if(HAS_COLOR_TABLE){//index
+		auto table=image.colorTable();
+		auto index=table.indexOf(penColor.rgba());
+		if(!VALID_COLOR_INDEX(index))return;
+		//draw
+		image.setPixel(pos,index);
+	}else{//non-index
+		image.setPixel(pos,penColor.rgba());
+	}
+}
+void Widget_Image::fillPoints(function<bool(const ColorRGBA &color)> condition){
+	QList<QPoint> ptList;
+	QPoint currentP,nearP;
+	ColorRGBA color;
+	ptList.push_back(cursorPos);
+	drawPoint(cursorPos);
+	for(int i=0;i<ptList.size();++i){
+		currentP=ptList[i];
+		for(int idx=0;idx<4;++idx){
+			//判断点是否在范围内
+			nearP = currentP + directions[idx];//得到相邻点
+			if(nearP.x()<0||nearP.y()<0)continue;
+			if(nearP.x()>=image.width()||nearP.y()>=image.height())continue;
+			if(ptList.contains(nearP))continue;
+			//判断点是否需要处理
+			color=qRgb2ColorRGBA(image.pixel(nearP));
+			if(condition(color)){
+				drawPoint(nearP);
+				ptList.push_back(nearP);
+			}
+		}
+	}
+	update();
+}
+void Widget_Image::fillByBorder(const QPoint &pos){fillByBorder(pos,penColor,borderColor);}
+void Widget_Image::fillByBorder(const QPoint &pos,const QColor &fillColor,const QColor &borderColor){
+	QList<QPoint> allPoints;
+	allPoints.push_back(pos);
+	QPoint p;QColor color;
+	while(allPoints.size()){
+		//处理当前坐标
+		p=allPoints.takeFirst();
+		color=image.pixelColor(p);
+		if(color==fillColor||color==borderColor)continue;//不需要改变,不处理
+		image.setPixelColor(p,fillColor);
+		//处理周围坐标
+		for(int idx=0;idx<4;++idx){
+			allPoints.push_back(p + directions[idx]);
+		}
+	}
+	update();
+}
+void Widget_Image::quantify(int level){
+	if(level<0||level>0xFF)return;//验证
+	double base=255.0/level;
+	//开始量化
+	int w=image.width(),h=image.height(),lv=0;
+	QColor color;
+	for(int x=0;x<w;++x){
+		for(int y=0;y<h;++y){
+			color=image.pixelColor(x,y);
+#define QUANTIFY(name,Name)\
+lv=round(color.name()/base);\
+color.set##Name(round(base*lv));
+			QUANTIFY(red,Red)
+			QUANTIFY(green,Green)
+			QUANTIFY(blue,Blue)
+#undef QUANTIFY
+			image.setPixelColor(x,y,color);
+		}
+	}
+	update();
+}
+void Widget_Image::stroke(const QColor &bgColor, const QColor &strokeColor){
+	forEachPixel(image.rect(),[&](int x,int y,QColor &color){
+		if(color==bgColor||color==strokeColor)return;//从物体开始计算
+		//开始绘制
+		const int len=3;
+		QColor clr;
+		for(int a=x-len;a<=x+len;++a){
+			for(int b=y-len;b<=y+len;++b){
+				//过滤
+				if(a<0||b<0||a>=image.width()||b>=image.height())continue;
+				if(abs(a-x)+abs(b-y)>len)continue;
+				//开始修改
+				clr=image.pixelColor(a,b);
+				if(clr==bgColor){
+					image.setPixelColor(a,b,strokeColor);
+				}
+			}
+		}
+	});
+}
+//各种事件函数
 void Widget_Image::timerEvent(QTimerEvent *ev){
 	if(ev->timerId()==flashTimerID){
 		flashStatus=!flashStatus;
@@ -318,15 +379,28 @@ void Widget_Image::mousePressEvent(QMouseEvent *ev){
 	if(image.isNull())return;
 	switch(ev->button()){
 		case Qt::LeftButton:
-			if(HAS_COLOR_TABLE){//index
-				auto table=image.colorTable();
-				auto index=table.indexOf(penColor.rgba());
-				if(!VALID_COLOR_INDEX(index))return;
-				//draw
-				image.setPixel(cursorPos,index);
-			}else{//non-index
-				image.setPixel(cursorPos,penColor.rgba());
+			switch(editMode){
+				case Edit_Pen:drawPoint(cursorPos);break;
+				case Edit_Fill:{//只把连通的原色改变成目标色
+					auto srcColor=qRgb2ColorRGBA(image.pixel(cursorPos));
+					fillPoints([=](const ColorRGBA &color){
+						return srcColor==color;
+					});
+				}break;
+				case Edit_FillByOrgColor:{
+				}break;
+				case Edit_FillByBorder:{
+					fillByBorder(cursorPos);
+				}break;
 			}
+		break;
+		case Qt::RightButton:
+			if(!tableViewColor){
+				tableViewColor=new TableView_Color();
+				tableViewColor->setWindowTitle(windowTitle());
+				tableViewColor->setWidgetImage(*this);
+			}
+			tableViewColor->show();
 		break;
 	}
 }
@@ -340,7 +414,7 @@ void Widget_Image::mouseMoveEvent(QMouseEvent *ev){
 	if(cursorPos!=p){
 		cursorPos=p;
 		if(ev->buttons()==Qt::LeftButton){
-			image.setPixel(cursorPos,penColor.rgba());
+			drawPoint(cursorPos);
 		}
 		update();
 	}
@@ -371,6 +445,12 @@ void Widget_Image::paintEvent(QPaintEvent *ev){
 		//set color
 		auto p=imageToMouse(cursorPos);
 		painter.drawRect(p.x(),p.y(),w,h);
+	}
+}
+void Widget_Image::closeEvent(QCloseEvent *ev){
+	if(tableViewColor){
+		tableViewColor->close();
+		tableViewColor->deleteLater();
 	}
 }
 

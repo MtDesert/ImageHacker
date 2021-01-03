@@ -17,22 +17,17 @@
    <property name="currentIndex">
     <number>0</number>
    </property>
-   <widget class="Widget_Image" name="widget_SrcImage">
+   <widget class="QScrollArea" name="scrollArea_SrcImage">
     <attribute name="title">
      <string>原图</string>
     </attribute>
    </widget>
-   <widget class="QTableView" name="tableView_SrcColor">
+   <widget class="QScrollArea" name="scrollArea_MaskImage">
     <attribute name="title">
-     <string>原图色表</string>
+     <string>条件</string>
     </attribute>
    </widget>
-   <widget class="QTableView" name="tableView_DestColor">
-    <attribute name="title">
-     <string>目标图色表</string>
-    </attribute>
-   </widget>
-   <widget class="Widget_Image" name="widget_DestImage">
+   <widget class="QScrollArea" name="scrollArea_DestImage">
     <attribute name="title">
      <string>目标图</string>
     </attribute>
@@ -80,37 +75,14 @@
     <addaction name="actionImage_loadBMP"/>
     <addaction name="actionImage_loadPNG"/>
     <addaction name="separator"/>
+    <addaction name="actionMask_Open"/>
+    <addaction name="separator"/>
     <addaction name="actionImage_save"/>
     <addaction name="actionImage_save_palette"/>
     <addaction name="actionImage_saveBMP"/>
     <addaction name="actionImage_savePNG"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuSrcTable">
-    <property name="title">
-     <string>原图色表</string>
-    </property>
-    <addaction name="actionSrcTable_Insert"/>
-    <addaction name="actionSrcTable_Delete"/>
-    <addaction name="actionSrcTable_Edit"/>
-   </widget>
-   <widget class="QMenu" name="menuDestTable">
-    <property name="title">
-     <string>目标色表图</string>
-    </property>
-    <addaction name="actionDestTable_Insert"/>
-    <addaction name="actionDestTable_Delete"/>
-    <addaction name="actionDestTable_Edit"/>
-    <addaction name="separator"/>
-    <addaction name="actionDestTable_MoveUp"/>
-    <addaction name="actionDestTable_MoveDown"/>
-    <addaction name="separator"/>
-    <addaction name="actionDestTable_DeltaComp"/>
-    <addaction name="actionDestTable_SortByDelta"/>
-    <addaction name="actionDestTable_RemoveDelta"/>
-    <addaction name="separator"/>
-    <addaction name="actionDestImage_Remake"/>
    </widget>
    <widget class="QMenu" name="menuPalette">
     <property name="title">
@@ -119,9 +91,19 @@
     <addaction name="actionPalette_MakePalette"/>
     <addaction name="actionPalette_MakeDestImage"/>
    </widget>
+   <widget class="QMenu" name="menuPaint">
+    <property name="title">
+     <string>绘图</string>
+    </property>
+    <addaction name="actionPaint_Pen"/>
+    <addaction name="actionPaint_Fill"/>
+    <addaction name="actionPaint_FillByOrgColor"/>
+    <addaction name="actionPaint_FillByBorder"/>
+    <addaction name="separator"/>
+    <addaction name="actionPaint_Quantify"/>
+   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuSrcTable"/>
-   <addaction name="menuDestTable"/>
+   <addaction name="menuPaint"/>
    <addaction name="menuPalette"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
@@ -241,6 +223,41 @@
   <action name="actionDestTable_RemoveDelta">
    <property name="text">
     <string>去差异化</string>
+   </property>
+  </action>
+  <action name="actionMask_Open">
+   <property name="text">
+    <string>打开mask</string>
+   </property>
+  </action>
+  <action name="actionMaskTable_AnalyseOrgColor">
+   <property name="text">
+    <string>分析本色</string>
+   </property>
+  </action>
+  <action name="actionPaint_Pen">
+   <property name="text">
+    <string>铅笔</string>
+   </property>
+  </action>
+  <action name="actionPaint_Fill">
+   <property name="text">
+    <string>填充</string>
+   </property>
+  </action>
+  <action name="actionPaint_FillByOrgColor">
+   <property name="text">
+    <string>填充(按本色)</string>
+   </property>
+  </action>
+  <action name="actionPaint_FillByBorder">
+   <property name="text">
+    <string>填充(按边界)</string>
+   </property>
+  </action>
+  <action name="actionPaint_Quantify">
+   <property name="text">
+    <string>量化</string>
    </property>
   </action>
  </widget>

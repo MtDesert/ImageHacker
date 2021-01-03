@@ -20,6 +20,7 @@ INCLUDEPATH += \
 ../../GamesProjects/libGamesEngines/Cpp11 \
 ../../GamesProjects/libGamesEngines/Cpp11/Containers \
 ../../GamesProjects/libGamesEngines/Math \
+../../GamesProjects/libGamesEngines/Algorithm \
 ../../GamesProjects/libGamesClient/Zipper \
 ../../GamesProjects/libGamesClient/Image \
 ../../GamesProjects/libGamesClient/Image/ColorSpaces
@@ -27,20 +28,20 @@ INCLUDEPATH += \
 LIBS += -lGamesEngines -lGamesClient -lgtk-3 -lgobject-2.0
 
 SOURCES += \
-		main.cpp \
-		MainWindow.cpp \
+	TableView_Color.cpp \
+	main.cpp \
+	MainWindow.cpp \
 	TableModel_Color.cpp \
 	Widget_Image.cpp \
-	TableModel_Palette.cpp \
 	Dialog_SavePNG.cpp \
 	Dialog_SaveBMP.cpp \
 	TableModel_PNG.cpp
 
 HEADERS += \
-		MainWindow.h \
+	MainWindow.h \
 	TableModel_Color.h \
+	TableView_Color.h \
 	Widget_Image.h \
-	TableModel_Palette.h \
 	Dialog_SavePNG.h \
 	common.h \
 	Dialog_SaveBMP.h \
@@ -48,7 +49,7 @@ HEADERS += \
 	TableModel_PNG.h
 
 FORMS += \
-		MainWindow.ui \
+	MainWindow.ui \
 	Dialog_SavePNG.ui \
 	Dialog_SaveBMP.ui
 
